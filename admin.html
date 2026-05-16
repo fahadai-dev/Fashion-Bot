@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BotBazaar Admin</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Arial,sans-serif; background:#f1f5f9; }
+  .header { background:#16a34a; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+  .header h1 { color:white; font-size:20px; }
+  .header p { color:#bbf7d0; font-size:13px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; padding:24px; }
+  .stat-card { background:white; padding:20px; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+  .stat-card h3 { color:#6b7280; font-size:13px; margin-bottom:8px; }
+  .stat-card p { color:#111827; font-size:28px; font-weight:700; }
+  .stat-card span { font-size:12px; color:#16a34a; }
+  .section { padding:0 24px 24px; }
+  .section h2 { font-size:16px; color:#374151; margin-bottom:12px; }
+  table { width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08); border-collapse:collapse; }
+  th { background:#f9fafb; padding:12px 16px; text-align:left; font-size:13px; color:#6b7280; border-bottom:1px solid #e5e7eb; }
+  td { padding:12px 16px; font-size:14px; color:#374151; border-bottom:1px solid #f3f4f6; }
+  tr:last-child td { border-bottom:none; }
+  .badge { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; }
+  .badge.pending { background:#fef3c7; color:#d97706; }
+  .badge.confirmed { background:#d1fae5; color:#059669; }
+  .badge.delivered { background:#dbeafe; color:#2563eb; }
+  .refresh-btn { background:#16a34a; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:14px; float:right; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🛍️ Rina Fashion — Admin Dashboard</h1>
+    <p>BotBazaar দ্বারা পরিচালিত</p>
+  </div>
+  <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+</div>
+
+<div class="stats">
+  <div class="stat-card">
+    <h3>মোট অর্ডার</h3>
+    <p id="totalOrders">...</p>
+    <span>সব অর্ডার</span>
+  </div>
+  <div class="stat-card">
+    <h3>Pending অর্ডার</h3>
+    <p id="pendingOrders">...</p>
+    <span>অপেক্ষায় আছে</span>
+  </div>
+  <div class="stat-card">
+    <h3>মোট কাস্টমার</h3>
+    <p id="totalCustomers">...</p>
+    <span>registered</span>
+  </div>
+  <div class="stat-card">
+    <h3>মোট আয়</h3>
+    <p id="totalRevenue">...</p>
+    <span>টাকা</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📦 সাম্প্রতিক অর্ডার</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ফোন</th>
+        <th>পণ্য</th>
+        <th>পরিমাণ</th>
+        <th>দাম</th>
+        <th>ঠিকানা</th>
+        <th>স্ট্যাটাস</th>
+        <th>সময়</th>
+      </tr>
+    </thead>
+    <tbody id="ordersTable">
+      <tr><td colspan="7" style="text-align:center;color:#9ca3af">লোড হচ্ছে...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h2>💬 সাম্প্রতিক কথোপকথন</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ফোন</th>
+        <th>বার্তা</th>
+        <th>কে বলেছে</th>
+        <th>সময়</th>
+      </tr>
+    </thead>
+    <tbody id="chatsTable">
+      <tr><td colspan="4" style="text-align:center;color:#9ca3af">লোড হচ্ছে...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+async function loadAll() {
+  await loadOrders();
+  await loadChats();
+}
+
+async function loadOrders() {
+  try {
+    const res = await fetch('http://localhost:3000/admin/orders');
+    const data = await res.json();
+    
+    document.getElementById('totalOrders').innerText = data.length;
+    document.getElementById('pendingOrders').innerText = data.filter(o => o.status === 'pending').length;
+    document.getElementById('totalRevenue').innerText = data.reduce((sum, o) => sum + (o.price * o.quantity || 0), 0).toFixed(0);
+
+    const tbody = document.getElementById('ordersTable');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9ca3af">কোনো অর্ডার নেই</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(o => `
+      <tr>
+        <td>${o.customer_phone}</td>
+        <td>${o.product_name}</td>
+        <td>${o.quantity}</td>
+        <td>${o.price} ৳</td>
+        <td>${o.address || '-'}</td>
+        <td><span class="badge ${o.status}">${o.status}</span></td>
+        <td>${new Date(o.created_at).toLocaleDateString('bn-BD')}</td>
+      </tr>
+    `).join('');
+  } catch(err) {
+    document.getElementById('ordersTable').innerHTML = '<tr><td colspan="7" style="text-align:center;color:red">Server connect হচ্ছে না</td></tr>';
+  }
+}
+
+async function loadChats() {
+  try {
+    const res = await fetch('http://localhost:3000/admin/chats');
+    const data = await res.json();
+    
+    document.getElementById('totalCustomers').innerText = new Set(data.map(c => c.customer_phone)).size;
+
+    const tbody = document.getElementById('chatsTable');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#9ca3af">কোনো কথোপকথন নেই</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.slice(0,20).map(c => `
+      <tr>
+        <td>${c.customer_phone}</td>
+        <td>${c.message.substring(0,60)}${c.message.length > 60 ? '...' : ''}</td>
+        <td><span class="badge ${c.role === 'user' ? 'pending' : 'confirmed'}">${c.role === 'user' ? '👤 কাস্টমার' : '🤖 Bot'}</span></td>
+        <td>${new Date(c.created_at).toLocaleDateString('bn-BD')}</td>
+      </tr>
+    `).join('');
+  } catch(err) {
+    document.getElementById('chatsTable').innerHTML = '<tr><td colspan="4" style="text-align:center;color:red">Server connect হচ্ছে না</td></tr>';
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>

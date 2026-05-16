@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Test</title>
+</head>
+<body style="font-family:Arial;padding:30px;max-width:600px;margin:0 auto">
+
+<h2>🤖 Rina Fashion Bot</h2>
+
+<div style="display:flex;gap:10px;margin-bottom:20px">
+  <input 
+    id="msg" 
+    type="text"
+    placeholder="যেমন: শাড়ির দাম কত?" 
+    style="flex:1;padding:12px;font-size:16px;border:1px solid #ccc;border-radius:6px"
+  />
+  <button 
+    onclick="sendMessage()" 
+    style="padding:12px 20px;background:#16a34a;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer"
+  >পাঠান</button>
+</div>
+
+<div id="result" style="padding:16px;background:#f3f4f6;border-radius:8px;font-size:16px;line-height:1.6;min-height:60px">
+  এখানে reply আসবে...
+</div>
+
+<script>
+async function sendMessage() {
+  const msg = document.getElementById('msg').value.trim();
+  if (!msg) { alert('কিছু লিখুন!'); return; }
+  
+  const resultDiv = document.getElementById('result');
+  resultDiv.innerText = '⏳ অপেক্ষা করুন...';
+
+  try {
+    const response = await fetch('http://localhost:3000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, phone: '01711111111' })
+    });
+
+    const data = await response.json();
+
+    if (data.reply) {
+      resultDiv.innerText = '🤖 ' + data.reply;
+    } else if (data.error) {
+      resultDiv.innerText = '❌ Error: ' + data.error;
+    } else {
+      resultDiv.innerText = JSON.stringify(data);
+    }
+
+  } catch (err) {
+    resultDiv.innerText = '❌ Server এ connect হচ্ছে না: ' + err.message;
+  }
+}
+
+document.getElementById('msg').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+
+</body>
+</html>
