@@ -8,7 +8,8 @@ const {
   saveMessage,
   getChatHistory,
   createOrder,
-} = require("./db");
+  supabase,
+} = require("../db");
 
 const app = express();
 app.use(
@@ -24,15 +25,12 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 testConnection();
 
-app.get("/", (req, res) => {
-  res.send("BotBazaar Server চালু আছে ✅");
-});
+app.get("/", (req, res) => res.send("BotBazaar Server চালু আছে ✅"));
 
 app.post("/chat", async (req, res) => {
   try {
     const { message, phone } = req.body;
     const customerPhone = phone || "guest";
-
     const products = await getAllProducts();
     const history = await getChatHistory(customerPhone);
 
@@ -49,7 +47,7 @@ app.post("/chat", async (req, res) => {
     }));
 
     const systemPrompt = `তুমি Rina Fashion এর sales assistant "রিনা"। তুমি একজন বাস্তব মানুষের মতো কথা বলো।
-
+ 
 নিয়ম:
 - সবসময় বাংলায় কথা বলো
 - উত্তর সর্বোচ্চ ৩-৪ লাইন, ছোট ও সহজ
@@ -57,7 +55,7 @@ app.post("/chat", async (req, res) => {
 - শুধু নিচের product list থেকে তথ্য দাও
 - অর্ডার করতে চাইলে শুধু নাম, ফোন ও ঠিকানা জিজ্ঞেস করো
 - friendly ও natural ভাষায় কথা বলো, যেন বন্ধু কথা বলছে
-
+ 
 আমাদের পণ্য:
 ${productList}`;
 
@@ -72,10 +70,8 @@ ${productList}`;
     });
 
     const reply = completion.choices[0].message.content;
-
     await saveMessage(customerPhone, "user", message);
     await saveMessage(customerPhone, "assistant", reply);
-
     res.json({ reply });
   } catch (error) {
     console.error("Error:", error.message);
@@ -83,7 +79,6 @@ ${productList}`;
   }
 });
 
-// ✅ Order System
 app.post("/order", async (req, res) => {
   try {
     const { customerPhone, productName, quantity, price, address } = req.body;
@@ -108,23 +103,20 @@ app.post("/order", async (req, res) => {
   }
 });
 
-// Admin routes
 app.get("/admin/orders", async (req, res) => {
-  const { data } = await require("./db")
-    .supabase.from("orders")
+  const { data } = await supabase
+    .from("orders")
     .select("*")
     .order("created_at", { ascending: false });
   res.json(data || []);
 });
 
 app.get("/admin/chats", async (req, res) => {
-  const { data } = await require("./db")
-    .supabase.from("conversations")
+  const { data } = await supabase
+    .from("conversations")
     .select("*")
     .order("created_at", { ascending: false });
   res.json(data || []);
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server চালু আছে port ${process.env.PORT || 3000} এ`);
-});
+module.exports = app;
