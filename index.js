@@ -2,14 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const Groq = require("groq-sdk");
-const {
-  testConnection,
-  getAllProducts,
-  saveMessage,
-  getChatHistory,
-  createOrder,
-  supabase,
-} = require("./db");
+const db = require("./db");
 
 const app = express();
 app.use(
@@ -22,16 +15,18 @@ app.use(
 app.use(express.json());
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-testConnection();
+db.testConnection();
 
-app.get("/", (req, res) => res.send("BotBazaar Server চালু আছে ✅"));
+app.get("/", (req, res) => {
+  res.send("BotBazaar Server চালু আছে ✅");
+});
 
 app.post("/chat", async (req, res) => {
   try {
     const { message, phone } = req.body;
     const customerPhone = phone || "guest";
-    const products = await getAllProducts();
-    const history = await getChatHistory(customerPhone);
+    const products = await db.getAllProducts();
+    const history = await db.getChatHistory(customerPhone);
     const productList = products
       .map(
         (p) =>
@@ -42,7 +37,16 @@ app.post("/chat", async (req, res) => {
       role: h.role === "user" ? "user" : "assistant",
       content: h.message,
     }));
-    const systemPrompt = `তুমি Rina Fashion এর sales assistant "রিনা"।\nনিয়ম:\n- সবসময় বাংলায় কথা বলো\n- উত্তর সর্বোচ্চ ৩-৪ লাইন\n- শুধু নিচের product list থেকে তথ্য দাও\nআমাদের পণ্য:\n${productList}`;
+    const systemPrompt = `তুমি Rina Fashion এর sales assistant "রিনা"। তুমি একজন বাস্তব মানুষের মতো কথা বলো।
+নিয়ম:
+- সবসময় বাংলায় কথা বলো
+- উত্তর সর্বোচ্চ ৩-৪ লাইন, ছোট ও সহজ
+- কখনো বানোয়াট তথ্য দিও না
+- শুধু নিচের product list থেকে তথ্য দাও
+- অর্ডার করতে চাইলে শুধু নাম, ফোন ও ঠিকানা জিজ্ঞেস করো
+- friendly ও natural ভাষায় কথা বলো
+আমাদের পণ্য:
+${productList}`;
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
@@ -53,8 +57,8 @@ app.post("/chat", async (req, res) => {
       max_tokens: 500,
     });
     const reply = completion.choices[0].message.content;
-    await saveMessage(customerPhone, "user", message);
-    await saveMessage(customerPhone, "assistant", reply);
+    await db.saveMessage(customerPhone, "user", message);
+    await db.saveMessage(customerPhone, "assistant", reply);
     res.json({ reply });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -64,27 +68,29 @@ app.post("/chat", async (req, res) => {
 app.post("/order", async (req, res) => {
   try {
     const { customerPhone, productName, quantity, price, address } = req.body;
-    const order = await createOrder(
+    const order = await db.createOrder(
       customerPhone,
       productName,
       quantity,
       price,
       address,
     );
-    order
-      ? res.json({
-          success: true,
-          orderId: order.id,
-          message: "অর্ডার সফল হয়েছে! ✅",
-        })
-      : res.json({ success: false });
+    if (order) {
+      res.json({
+        success: true,
+        orderId: order.id,
+        message: "অর্ডার সফল হয়েছে! ✅",
+      });
+    } else {
+      res.json({ success: false, message: "অর্ডার হয়নি" });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 app.get("/admin/orders", async (req, res) => {
-  const { data } = await supabase
+  const { data } = await db.supabase
     .from("orders")
     .select("*")
     .order("created_at", { ascending: false });
@@ -92,13 +98,11 @@ app.get("/admin/orders", async (req, res) => {
 });
 
 app.get("/admin/chats", async (req, res) => {
-  const { data } = await supabase
+  const { data } = await db.supabase
     .from("conversations")
     .select("*")
     .order("created_at", { ascending: false });
   res.json(data || []);
 });
 
-app.listen(process.env.PORT || 3000, () =>
-  console.log(`Server চালু আছে port ${process.env.PORT || 3000} এ`),
-);
+module.exports = app;

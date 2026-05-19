@@ -94,7 +94,7 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const res = await fetch('http://localhost:3000/chat', {
+    const res = await fetch('https://fashion-bot-red.vercel.app/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: msg, phone: '01711111111' })
