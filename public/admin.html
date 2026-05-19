@@ -106,7 +106,7 @@ async function loadAll() {
 
 async function loadOrders() {
   try {
-    const res = await fetch('http://localhost:3000/admin/orders');
+    const res = await fetch('http://fashion-bot-red.vercel.app/admin/orders');
     const data = await res.json();
     
     document.getElementById('totalOrders').innerText = data.length;
@@ -136,7 +136,7 @@ async function loadOrders() {
 
 async function loadChats() {
   try {
-    const res = await fetch('http://localhost:3000/admin/chats');
+    const res = await fetch('http://fashion-bot-red.vercel.app/admin/chats');
     const data = await res.json();
     
     document.getElementById('totalCustomers').innerText = new Set(data.map(c => c.customer_phone)).size;
