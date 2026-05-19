@@ -4,20 +4,28 @@
     {
       "src": "index.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/chat",
-      "dest": "public/chat.html"
+      "dest": "/public/chat.html"
     },
     {
       "src": "/admin",
-      "dest": "public/admin.html"
+      "dest": "/public/admin.html"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "index.js"
+      "dest": "/index.js"
     }
   ]
 }
